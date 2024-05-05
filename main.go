@@ -1,18 +1,50 @@
 package main
 
 import (
-	"fmt"
+	"bytes"
+	"encoding/binary"
+	"log"
+	"net"
 )
 
-func intSeq() func() int {
-	i := 0
-	return func() int {
-		i++
-		return i
-	}
+type CommandCode uint16
+
+const (
+	CNN CommandCode = 0
+	MSG             = 1
+)
+
+type Command struct {
+	version uint16
+	id      uint8
+	code    CommandCode
 }
 
+type ConnectCommand struct {
+	Command
+	ulid int
+}
+
+const Host string = "127.0.0.1:5501"
+
 func main() {
-	//breaking jdsl
-	fmt.Println("I'm thinking of using the ::19990")
+	log.Printf("trying to connect to %s...\n", Host)
+	conn, err := net.Dial("tcp", Host)
+	if err != nil {
+		log.Fatalf("Could not connect to %s\n%s\n", Host, err)
+	}
+	cmd := Command{
+		version: 0,
+		id:      1,
+		code:    CommandCode(CNN),
+	}
+	log.Printf("Connected to %s...\n", Host)
+	buffer := new(bytes.Buffer)
+	if err = binary.Write(buffer, binary.BigEndian, cmd); err != nil {
+		log.Printf("Could not parse cmd %v\n%s\n", cmd, err)
+	}
+	if _, err = conn.Write(buffer.Bytes()); err != nil {
+		log.Fatalf("Could not write to connection\n%s\n", err)
+	}
+	conn.Close()
 }
