@@ -20,11 +20,6 @@ type Command struct {
 	code    CommandCode
 }
 
-type ConnectCommand struct {
-	Command
-	ulid int
-}
-
 const Host string = "127.0.0.1:5501"
 
 func main() {
