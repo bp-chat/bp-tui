@@ -7,10 +7,8 @@ import (
 )
 
 type Command struct {
-	version uint16
-	sync_id uint8
-	id      uint16
-	args    [][]uint8
+	Header
+	Args [][]uint8
 }
 
 const separator uint8 = 0x0a
@@ -18,18 +16,18 @@ const separator uint8 = 0x0a
 func (cmd *Command) encode() ([]uint8, error) {
 	buffer := new(bytes.Buffer)
 
-	if err := write(buffer, cmd.version, false); err != nil {
+	if err := write(buffer, cmd.Version, false); err != nil {
 		return nil, err
 	}
 
-	if err := write(buffer, cmd.sync_id, false); err != nil {
+	if err := write(buffer, cmd.SyncId, false); err != nil {
 		return nil, err
 	}
-	if err := write(buffer, cmd.id, false); err != nil {
+	if err := write(buffer, cmd.Id, false); err != nil {
 		return nil, err
 	}
-	for i, element := range cmd.args {
-		if err := write(buffer, element, i+1 == len(cmd.args)); err != nil {
+	for i, element := range cmd.Args {
+		if err := write(buffer, element, i+1 == len(cmd.Args)); err != nil {
 			return nil, err
 		}
 	}
@@ -75,10 +73,14 @@ func decode(source []uint8, arg_count int) (*Command, error) {
 		return nil, errors.New("Argument count mismatch")
 	}
 
-	return &Command{
+	header := Header{
 		uint16(source[0])<<8 | uint16(source[1]),
 		source[3],
 		uint16(source[5])<<8 | uint16(source[6]),
+	}
+
+	return &Command{
+		header,
 		args,
 	}, nil
 }
