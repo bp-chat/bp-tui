@@ -24,3 +24,20 @@ func (m *Message) ToCommand() commands.Command {
 		Args:   args,
 	}
 }
+
+func FromCommand(cmd *commands.Command) Message {
+	headers := cmd.Header
+	r := "whoops"
+	m := "failed to read message"
+	if cmd.Args[0] != nil {
+		r = string(cmd.Args[0])
+	}
+	if cmd.Args[1] != nil {
+		m = string(cmd.Args[1])
+	}
+	return Message{
+		Header:    headers,
+		Recipient: r,
+		Message:   m,
+	}
+}

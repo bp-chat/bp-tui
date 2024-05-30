@@ -1,4 +1,5 @@
-[] finish test
-[] send message
-[] receive message
+[] fix test
+[] remove console io from connection
+[] add charm dependencies
 [] implement "checksum"
+[] add crypto

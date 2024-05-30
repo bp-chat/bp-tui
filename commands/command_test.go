@@ -17,7 +17,7 @@ func TestEncode(t *testing.T) {
 		},
 	}
 	expected := []uint8{0xf0, 0x0f, 0x0a, 0x05, 0x0a, 0x0f, 0xf0, 0x0a, 0x01, 0x0a, 0x02, 0x03}
-	data, err := cmd.encode()
+	data, err := cmd.Encode()
 	if err != nil {
 		t.Errorf("error while encoding the data")
 		t.Error(err)
@@ -35,7 +35,7 @@ func TestEncode(t *testing.T) {
 
 func TestDecode(t *testing.T) {
 	source := []uint8{0xf0, 0x0f, 0x0a, 0x05, 0x0a, 0x0f, 0xf0, 0x0a, 0x01, 0x0a, 0x02, 0x03}
-	actual, err := decode(source, 2)
+	actual, err := Decode(source, 2)
 	if err != nil {
 		t.Fatalf("Could not decode data %v", err)
 	}

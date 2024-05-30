@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"errors"
+	"fmt"
 )
 
 type Command struct {
@@ -13,7 +14,7 @@ type Command struct {
 
 const separator uint8 = 0x0a
 
-func (cmd *Command) encode() ([]uint8, error) {
+func (cmd *Command) Encode() ([]uint8, error) {
 	buffer := new(bytes.Buffer)
 
 	if err := write(buffer, cmd.Version, false); err != nil {
@@ -45,7 +46,7 @@ func write(b *bytes.Buffer, data any, is_last bool) error {
 	return binary.Write(b, binary.BigEndian, separator)
 }
 
-func decode(source []uint8, arg_count int) (*Command, error) {
+func Decode(source []uint8, arg_count int) (*Command, error) {
 	if len(source) < 8 {
 		return nil, errors.New("source is to small, it must be at least 8 bytes")
 	}
@@ -58,6 +59,10 @@ func decode(source []uint8, arg_count int) (*Command, error) {
 	var args [][]uint8
 	var c_arg []uint8
 	for i := 8; i < len(source); i++ {
+		if len(args) == arg_count {
+			break
+		}
+
 		elem := source[i]
 		if elem != separator {
 			c_arg = append(c_arg, elem)
@@ -70,7 +75,11 @@ func decode(source []uint8, arg_count int) (*Command, error) {
 	}
 
 	if len(args) != arg_count {
-		return nil, errors.New("Argument count mismatch")
+		msg := fmt.Sprintf(
+			"Argument count mismatch\nexpected:%v and found %v",
+			arg_count,
+			len(args))
+		return nil, errors.New(msg)
 	}
 
 	header := Header{
