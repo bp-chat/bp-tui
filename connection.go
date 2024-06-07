@@ -3,7 +3,6 @@ package main
 import (
 	"bufio"
 	"github.com/bp-chat/bp-tui/commands"
-	"github.com/bp-chat/bp-tui/commands/calls"
 	"log"
 	"net"
 )
@@ -43,22 +42,20 @@ func (cnn *connection) Send(cmd commands.Command) error {
 	return cnn.writer.Flush()
 }
 
-func (cnn *connection) Receive() {
+func (cnn *connection) Receive() (*commands.Command, error) {
 	buffer := make([]byte, 64)
 	_, err := cnn.reader.Read(buffer)
 	if err != nil {
 		log.Printf("err: %v", err)
 		cnn.receivedEof = true
-		return
+		return nil, err
 	}
 	cmd, err := commands.Decode(buffer, 2)
 	if err != nil {
 		log.Printf("could not parse data\n%s\n", err)
-		return
+		return nil, err
 	}
-	msg := calls.FromCommand(cmd)
-	log.Printf("received: %s", msg.Message)
-	return
+	return cmd, nil
 }
 
 func (cnn *connection) Close() {
