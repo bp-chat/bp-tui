@@ -1,31 +1,50 @@
 package main
 
 import (
+	"crypto/ecdh"
 	"crypto/ed25519"
+	"crypto/rand"
 	"fmt"
 	"log"
-	"strings"
 )
 
-func test() {
-	pbka, pka, siga := createKeys("eVmg28qWmcsNLvlW3BkRfNeco47GD49m")
-	pbkb, pkb, sigb := createKeys("clMRAq1NcKOXfK10tohluvYgqsXFA3mI")
-	log.Printf("Alice pvk:\n%x\n\n", pka)
-	log.Printf("Alice puk:\n%x\n\n", pbka)
-	log.Printf("Alice sig:\n%x\n\n", siga)
-	fmt.Printf("\n\n\n")
-	log.Printf("Bob pvk:\n%x\n\n", pkb)
-	log.Printf("Bob puk:\n%x\n\n", pbkb)
-	log.Printf("Bob sig:\n%x\n\n", sigb)
-	fmt.Printf("\n\n\n")
+type idKey struct {
+	privateKey *ecdh.PrivateKey
+	publicKey  *ecdh.PublicKey
+	signature  []byte
 }
 
-func createKeys(seed string) (ed25519.PublicKey, ed25519.PrivateKey, []byte) {
-	seedReader := strings.NewReader(seed)
-	pbka, pka, err := ed25519.GenerateKey(seedReader)
+func test() {
+	aliceKey := createKeys()
+	bobKey := createKeys()
+	fmt.Printf("### Alice ###\n")
+	fmt.Printf("pvk:%x\n", aliceKey.privateKey.Bytes())
+	fmt.Printf("puk:%x\n", aliceKey.publicKey.Bytes())
+	fmt.Printf("sig:%x\n", aliceKey.signature)
+	fmt.Printf("\n\n### Bob ###\n")
+	fmt.Printf("pvk:%x\n", bobKey.privateKey.Bytes())
+	fmt.Printf("puk:%x\n", bobKey.publicKey.Bytes())
+	fmt.Printf("sig:%x\n", bobKey.signature)
+	fmt.Printf("\n\n")
+
+	ska, _ := aliceKey.privateKey.ECDH(bobKey.publicKey)
+	skb, _ := bobKey.privateKey.ECDH(aliceKey.publicKey)
+	fmt.Printf("Alice shared:\t\t%x\n", ska)
+	fmt.Printf("Bob shared:\t\t%x\n", skb)
+}
+
+func createKeys() idKey {
+	curve := ecdh.X25519()
+	privateKey, err := curve.GenerateKey(rand.Reader)
 	if err != nil {
 		log.Fatalf("Could not create key\n%v", err)
 	}
-	sig := ed25519.Sign(pka, pbka)
-	return pbka, pka, sig
+	publicKey := privateKey.PublicKey()
+
+	sig := ed25519.Sign(append(privateKey.Bytes(), publicKey.Bytes()...), publicKey.Bytes())
+	return idKey{
+		privateKey,
+		publicKey,
+		sig,
+	}
 }
