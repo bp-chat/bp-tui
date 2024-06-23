@@ -21,6 +21,7 @@ const (
 const Host string = "127.0.0.1:6680"
 
 func main() {
+	test()
 	log.Printf("trying to connect to %s...\n", Host)
 	conn, err := connect(Host)
 	if err != nil {

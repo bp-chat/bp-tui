@@ -41,7 +41,7 @@ func New(send func(string)) Chat {
 
 	ta.ShowLineNumbers = false
 
-	vp := viewport.New(30, 5)
+	vp := viewport.New(30, 10)
 	vp.SetContent(`Welcome to the chat room!
 Type a message and press Enter to send.`)
 	ta.KeyMap.InsertNewline.SetEnabled(false)
