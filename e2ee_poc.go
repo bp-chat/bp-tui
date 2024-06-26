@@ -1,50 +1,66 @@
 package main
 
 import (
+	"crypto/aes"
 	"crypto/ecdh"
 	"crypto/ed25519"
 	"crypto/rand"
+	"crypto/sha256"
 	"fmt"
-	"log"
 )
 
-type idKey struct {
-	privateKey *ecdh.PrivateKey
-	publicKey  *ecdh.PublicKey
+type actorKeys struct {
+	privateKey ed25519.PrivateKey
+	publicKey  ed25519.PublicKey
+	preKey     *ecdh.PrivateKey
+	ek         *ecdh.PrivateKey
 	signature  []byte
 }
 
 func test() {
-	aliceKey := createKeys()
-	bobKey := createKeys()
-	fmt.Printf("### Alice ###\n")
-	fmt.Printf("pvk:%x\n", aliceKey.privateKey.Bytes())
-	fmt.Printf("puk:%x\n", aliceKey.publicKey.Bytes())
-	fmt.Printf("sig:%x\n", aliceKey.signature)
-	fmt.Printf("\n\n### Bob ###\n")
-	fmt.Printf("pvk:%x\n", bobKey.privateKey.Bytes())
-	fmt.Printf("puk:%x\n", bobKey.publicKey.Bytes())
-	fmt.Printf("sig:%x\n", bobKey.signature)
-	fmt.Printf("\n\n")
+	alice := createKeys()
+	bob := createKeys()
+	textMsg := "hello bob, how ?"
 
-	ska, _ := aliceKey.privateKey.ECDH(bobKey.publicKey)
-	skb, _ := bobKey.privateKey.ECDH(aliceKey.publicKey)
-	fmt.Printf("Alice shared:\t\t%x\n", ska)
-	fmt.Printf("Bob shared:\t\t%x\n", skb)
+	isValidSignature := ed25519.Verify(bob.publicKey, bob.preKey.PublicKey().Bytes(), bob.signature)
+	if isValidSignature == false {
+		fmt.Println("Could not verify signature")
+	}
+
+	adhe, _ := alice.ek.ECDH(bob.preKey.PublicKey())
+	adhi, _ := alice.preKey.ECDH(bob.ek.PublicKey())
+	ask := sha256.Sum256(append(adhe, adhi...))
+
+	//todo transform in a stream cipher using a initial vector
+	ac, _ := aes.NewCipher(ask[:])
+	fmt.Println(ac.BlockSize())
+	msg := make([]byte, len(textMsg))
+	ac.Encrypt(msg, []byte(textMsg))
+
+	bdhe, _ := bob.ek.ECDH(alice.preKey.PublicKey())
+	bdhi, _ := bob.preKey.ECDH(alice.ek.PublicKey())
+	// I don't like that it's necessary to preserve order but it's ok... I guess...
+	bsk := sha256.Sum256(append(bdhi, bdhe...))
+	bc, _ := aes.NewCipher(bsk[:])
+	receivedMsg := make([]byte, len(msg))
+	bc.Decrypt(receivedMsg, msg)
+	outputMsg := string(receivedMsg[:])
+	fmt.Println(outputMsg)
+
+	fmt.Println("ok for now")
 }
 
-func createKeys() idKey {
+func createKeys() actorKeys {
 	curve := ecdh.X25519()
-	privateKey, err := curve.GenerateKey(rand.Reader)
-	if err != nil {
-		log.Fatalf("Could not create key\n%v", err)
-	}
-	publicKey := privateKey.PublicKey()
-
-	sig := ed25519.Sign(append(privateKey.Bytes(), publicKey.Bytes()...), publicKey.Bytes())
-	return idKey{
-		privateKey,
-		publicKey,
-		sig,
+	pubkey, pv, _ := ed25519.GenerateKey(rand.Reader)
+	preKey, _ := curve.GenerateKey(rand.Reader)
+	ek, _ := curve.GenerateKey(rand.Reader)
+	sinature := ed25519.Sign(pv, preKey.PublicKey().Bytes())
+	return actorKeys{
+		pv,
+		pubkey,
+		preKey,
+		ek,
+		sinature,
 	}
 }
