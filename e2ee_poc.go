@@ -2,11 +2,13 @@ package main
 
 import (
 	"crypto/aes"
+	"crypto/cipher"
 	"crypto/ecdh"
 	"crypto/ed25519"
 	"crypto/rand"
 	"crypto/sha256"
 	"fmt"
+	"io"
 )
 
 type actorKeys struct {
@@ -18,9 +20,10 @@ type actorKeys struct {
 }
 
 func test() {
+	//TODO understand GCM
 	alice := createKeys()
 	bob := createKeys()
-	textMsg := "hello bob, how ?"
+	textMsg := "hello bob, how are you?"
 
 	isValidSignature := ed25519.Verify(bob.publicKey, bob.preKey.PublicKey().Bytes(), bob.signature)
 	if isValidSignature == false {
@@ -31,21 +34,24 @@ func test() {
 	adhi, _ := alice.preKey.ECDH(bob.ek.PublicKey())
 	ask := sha256.Sum256(append(adhe, adhi...))
 
-	//todo transform in a stream cipher using a initial vector
-	ac, _ := aes.NewCipher(ask[:])
-	fmt.Println(ac.BlockSize())
-	msg := make([]byte, len(textMsg))
-	ac.Encrypt(msg, []byte(textMsg))
+	abc, _ := aes.NewCipher(ask[:])
+	ac, _ := cipher.NewGCM(abc)
+	aiv := make([]byte, 12)
+	io.ReadFull(rand.Reader, aiv)
+	ciphertext := ac.Seal(nil, aiv, []byte(textMsg), nil)
+	fmsg := append(aiv, ciphertext...)
 
 	bdhe, _ := bob.ek.ECDH(alice.preKey.PublicKey())
 	bdhi, _ := bob.preKey.ECDH(alice.ek.PublicKey())
 	// I don't like that it's necessary to preserve order but it's ok... I guess...
 	bsk := sha256.Sum256(append(bdhi, bdhe...))
-	bc, _ := aes.NewCipher(bsk[:])
-	receivedMsg := make([]byte, len(msg))
-	bc.Decrypt(receivedMsg, msg)
-	outputMsg := string(receivedMsg[:])
-	fmt.Println(outputMsg)
+	bbc, _ := aes.NewCipher(bsk[:])
+
+	bc, _ := cipher.NewGCM(bbc)
+	riv := fmsg[:12]
+	dmsg, _ := bc.Open(nil, riv, fmsg[12:], nil)
+	fmt.Println("bob decipher")
+	fmt.Println(string(dmsg))
 
 	fmt.Println("ok for now")
 }
