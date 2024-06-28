@@ -2,7 +2,9 @@ package main
 
 import (
 	"bufio"
+	"fmt"
 	"log"
+	"os"
 	"time"
 
 	"github.com/bp-chat/bp-tui/commands"
@@ -10,6 +12,11 @@ import (
 	"github.com/bp-chat/bp-tui/ui"
 	tea "github.com/charmbracelet/bubbletea"
 )
+
+type ephemeralUser struct {
+	name string
+	keys KeySet
+}
 
 type CommandCode uint16
 
@@ -21,7 +28,13 @@ const (
 const Host string = "127.0.0.1:6680"
 
 func main() {
-	test()
+	fmt.Printf("\n\nWho are you\n")
+	reader := bufio.NewReader(os.Stdin)
+	name := getMessage(reader)
+	eu := ephemeralUser{
+		name: name,
+		keys: CreateKeys(),
+	}
 	log.Printf("trying to connect to %s...\n", Host)
 	conn, err := connect(Host)
 	if err != nil {
@@ -31,7 +44,7 @@ func main() {
 	log.Printf("Connected to %s...\n", Host)
 
 	p := tea.NewProgram(ui.New(func(nm string) {
-		send(conn, nm)
+		send(conn, eu, nm)
 	}))
 	go listen(conn, p)
 	if _, err := p.Run(); err != nil {
@@ -51,31 +64,23 @@ func listen(cnn *connection, teaProgam *tea.Program) {
 	}
 }
 
-func send(cnn *connection, msg string) {
+func send(cnn *connection, user ephemeralUser, msg string) {
 	cmsg := calls.Message{
 		Header: commands.Header{
 			Version: 0,
 			SyncId:  0,
 			Id:      0,
 		},
-		Recipient: "self",
+		Recipient: user.name,
 		Message:   msg,
 	}
 	cnn.Send(cmsg.ToCommand())
 }
 
-func getMessage(reader *bufio.Reader) calls.Message {
+func getMessage(reader *bufio.Reader) string {
 	input, err := reader.ReadString('\n')
 	if err != nil {
 		log.Fatalf("Could not parse input\n%s\n", err)
 	}
-	return calls.Message{
-		Header: commands.Header{
-			Version: 0,
-			SyncId:  0,
-			Id:      0,
-		},
-		Recipient: "self",
-		Message:   input,
-	}
+	return input
 }

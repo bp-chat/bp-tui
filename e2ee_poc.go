@@ -11,7 +11,7 @@ import (
 	"io"
 )
 
-type actorKeys struct {
+type KeySet struct {
 	privateKey ed25519.PrivateKey
 	publicKey  ed25519.PublicKey
 	preKey     *ecdh.PrivateKey
@@ -21,8 +21,8 @@ type actorKeys struct {
 
 func test() {
 	//TODO understand GCM
-	alice := createKeys()
-	bob := createKeys()
+	alice := CreateKeys()
+	bob := CreateKeys()
 	textMsg := "hello bob, how are you?"
 
 	isValidSignature := ed25519.Verify(bob.publicKey, bob.preKey.PublicKey().Bytes(), bob.signature)
@@ -56,13 +56,13 @@ func test() {
 	fmt.Println("ok for now")
 }
 
-func createKeys() actorKeys {
+func CreateKeys() KeySet {
 	curve := ecdh.X25519()
 	pubkey, pv, _ := ed25519.GenerateKey(rand.Reader)
 	preKey, _ := curve.GenerateKey(rand.Reader)
 	ek, _ := curve.GenerateKey(rand.Reader)
 	sinature := ed25519.Sign(pv, preKey.PublicKey().Bytes())
-	return actorKeys{
+	return KeySet{
 		pv,
 		pubkey,
 		preKey,
