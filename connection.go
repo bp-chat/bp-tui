@@ -31,7 +31,12 @@ func connect(address string) (*connection, error) {
 	}, nil
 }
 
-func (cnn *connection) Send(cmd commands.Command) error {
+func (cnn *connection) Send(outCommand commands.IOut) error {
+	cmd := outCommand.ToCommand(commands.Header{
+		Version: 0,
+		Id:      0,
+		SyncId:  0,
+	})
 	data, err := cmd.Encode()
 	if err != nil {
 		return err

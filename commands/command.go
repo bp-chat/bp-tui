@@ -7,6 +7,10 @@ import (
 	"fmt"
 )
 
+type IOut interface {
+	ToCommand(header Header) Command
+}
+
 type Command struct {
 	Header
 	Args [][]uint8

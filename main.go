@@ -7,8 +7,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/bp-chat/bp-tui/commands"
-	"github.com/bp-chat/bp-tui/commands/calls"
+	"github.com/bp-chat/bp-tui/commands/out"
 	"github.com/bp-chat/bp-tui/ui"
 	tea "github.com/charmbracelet/bubbletea"
 )
@@ -23,6 +22,7 @@ type CommandCode uint16
 const (
 	CNN CommandCode = 0
 	MSG             = 1
+	RKS             = 2
 )
 
 const Host string = "127.0.0.1:6680"
@@ -64,17 +64,21 @@ func listen(cnn *connection, teaProgam *tea.Program) {
 	}
 }
 
-func send(cnn *connection, user ephemeralUser, msg string) {
-	cmsg := calls.Message{
-		Header: commands.Header{
-			Version: 0,
-			SyncId:  0,
-			Id:      0,
-		},
+func send(cnn *connection, user ephemeralUser, textMsg string) error {
+	msg := out.Message{
 		Recipient: user.name,
-		Message:   msg,
+		Message:   textMsg,
 	}
-	cnn.Send(cmsg.ToCommand())
+	return cnn.Send(msg)
+}
+
+func registerE2eeKeys(cnn *connection, user ephemeralUser) error {
+	cmd := out.RegisterKeys{
+		IdKey:     user.keys.publicKey,
+		SignedKey: user.keys.ek.PublicKey().Bytes(),
+		Signature: user.keys.signature,
+	}
+	return cnn.Send(cmd)
 }
 
 func getMessage(reader *bufio.Reader) string {

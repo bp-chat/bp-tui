@@ -8,7 +8,7 @@ import (
 	"strings"
 
 	"github.com/bp-chat/bp-tui/commands"
-	"github.com/bp-chat/bp-tui/commands/calls"
+	"github.com/bp-chat/bp-tui/commands/out"
 	"github.com/charmbracelet/bubbles/textarea"
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
@@ -92,7 +92,7 @@ func (m Chat) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.err = msg
 		return m, nil
 	case *commands.Command:
-		cmsg := calls.FromCommand(msg)
+		cmsg, _ := out.FromCommand(msg)
 		m.messages = append(m.messages, m.receipStyle.Render("One: ")+cmsg.Message)
 		m.viewport.SetContent(strings.Join(m.messages, "\n"))
 		m.viewport.GotoBottom()
