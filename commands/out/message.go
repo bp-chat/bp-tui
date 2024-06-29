@@ -12,14 +12,14 @@ type Message struct {
 	Message   string
 }
 
-func (m Message) ToCommand(header commands.Header) commands.Command {
+func (m Message) ToCommand(syncId uint8) commands.Command {
 	args := [][]uint8{
 		[]uint8(m.Recipient),
 		[]uint8(m.Message),
 	}
 
 	return commands.Command{
-		Header: header,
+		Header: commands.NewHeader(commands.MSG, syncId),
 		Args:   args,
 	}
 }

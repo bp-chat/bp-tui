@@ -8,7 +8,7 @@ import (
 )
 
 type IOut interface {
-	ToCommand(header Header) Command
+	ToCommand(syncId uint8) Command
 }
 
 type Command struct {
@@ -85,11 +85,11 @@ func Decode(source []uint8, arg_count int) (*Command, error) {
 			len(args))
 		return nil, errors.New(msg)
 	}
-
+	commandId := uint16(source[5])<<8 | uint16(source[6])
 	header := Header{
 		uint16(source[0])<<8 | uint16(source[1]),
 		source[3],
-		uint16(source[5])<<8 | uint16(source[6]),
+		CommandCode(commandId),
 	}
 
 	return &Command{

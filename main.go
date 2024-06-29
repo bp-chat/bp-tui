@@ -17,14 +17,6 @@ type ephemeralUser struct {
 	keys KeySet
 }
 
-type CommandCode uint16
-
-const (
-	CNN CommandCode = 0
-	MSG             = 1
-	RKS             = 2
-)
-
 const Host string = "127.0.0.1:6680"
 
 func main() {

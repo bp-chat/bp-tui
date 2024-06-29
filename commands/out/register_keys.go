@@ -9,9 +9,9 @@ type RegisterKeys struct {
 }
 
 // ToCommand implements commands.IOut.
-func (r RegisterKeys) ToCommand(header commands.Header) commands.Command {
+func (r RegisterKeys) ToCommand(syncId uint8) commands.Command {
 	return commands.Command{
-		Header: header,
+		Header: commands.NewHeader(commands.RKS, syncId),
 		Args: [][]byte{
 			r.IdKey,
 			r.SignedKey,
