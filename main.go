@@ -34,6 +34,7 @@ func main() {
 	}
 	defer conn.Close()
 	log.Printf("Connected to %s...\n", Host)
+	registerE2eeKeys(conn, eu)
 
 	p := tea.NewProgram(ui.New(func(nm string) {
 		send(conn, eu, nm)

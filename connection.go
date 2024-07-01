@@ -32,7 +32,7 @@ func connect(address string) (*connection, error) {
 }
 
 func (cnn *connection) Send(outCommand commands.IOut) error {
-	cmd := outCommand.ToCommand(0)
+	cmd := outCommand.ToCommand(15)
 	data, err := cmd.Encode()
 	if err != nil {
 		return err
