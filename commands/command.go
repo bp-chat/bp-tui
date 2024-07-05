@@ -45,7 +45,7 @@ func write(b *bytes.Buffer, data any, is_last bool) error {
 		return err
 	}
 	if is_last {
-		return nil
+		return binary.Write(b, binary.BigEndian, separator)
 	}
 	return binary.Write(b, binary.BigEndian, separator)
 }

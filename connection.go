@@ -34,6 +34,7 @@ func connect(address string) (*connection, error) {
 func (cnn *connection) Send(outCommand commands.IOut) error {
 	cmd := outCommand.ToCommand(15)
 	data, err := cmd.Encode()
+	log.Printf("\n%v: %x\n", len(data), data)
 	if err != nil {
 		return err
 	}
