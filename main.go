@@ -72,6 +72,7 @@ func registerE2eeKeys(cnn *connection, user ephemeralUser) error {
 		SignedKey: user.keys.ek.PublicKey().Bytes(),
 		Signature: user.keys.signature,
 	}
+
 	return cnn.Send(cmd)
 }
 
