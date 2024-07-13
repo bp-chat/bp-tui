@@ -7,10 +7,12 @@ import (
 )
 
 type RegisterKeys struct {
-	User      string
-	IdKey     []byte
-	SignedKey []byte
-	Signature []byte
+	User         string
+	IdKey        []byte
+	SignedKey    []byte
+	Signature    []byte
+	EphemeralKey []byte //will be removed later when we implement a direct way of communication
+	EphemeralSig []byte //this too
 }
 
 // ToCommand implements commands.IOut.
@@ -24,6 +26,8 @@ func (r RegisterKeys) ToCommand(syncId uint8) commands.Command {
 			r.IdKey,
 			r.SignedKey,
 			r.Signature,
+			r.EphemeralKey,
+			r.EphemeralSig,
 		},
 	}
 }

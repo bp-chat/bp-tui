@@ -67,12 +67,12 @@ func send(cnn *connection, user ephemeralUser, textMsg string) error {
 
 func registerE2eeKeys(cnn *connection, user ephemeralUser) error {
 	cmd := out.RegisterKeys{
-		User:      user.name,
-		IdKey:     user.keys.publicKey,
-		SignedKey: user.keys.ek.PublicKey().Bytes(),
-		Signature: user.keys.signature,
+		User:         user.name,
+		IdKey:        user.keys.publicKey,
+		SignedKey:    user.keys.preKey.PublicKey().Bytes(),
+		Signature:    user.keys.signature,
+		EphemeralKey: user.keys.ek.PublicKey().Bytes(),
 	}
-
 	return cnn.Send(cmd)
 }
 

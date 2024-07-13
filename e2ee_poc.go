@@ -20,7 +20,8 @@ type KeySet struct {
 }
 
 func test() {
-	//TODO understand GCM
+	//TODO understand GCM https://en.wikipedia.org/wiki/Galois/Counter_Mode
+	//for some reason when using this mode we don't need to do mac or data
 	alice := CreateKeys()
 	bob := CreateKeys()
 	textMsg := "hello bob, how are you?"
@@ -30,13 +31,13 @@ func test() {
 		fmt.Println("Could not verify signature")
 	}
 
-	adhe, _ := alice.ek.ECDH(bob.preKey.PublicKey())
-	adhi, _ := alice.preKey.ECDH(bob.ek.PublicKey())
-	ask := sha256.Sum256(append(adhe, adhi...))
+	adhe, _ := alice.ek.ECDH(bob.preKey.PublicKey()) //create ephemeral key
+	adhi, _ := alice.preKey.ECDH(bob.ek.PublicKey()) //create identity key
+	ask := sha256.Sum256(append(adhe, adhi...))      //append both to create a shared key Alice_Shared_Key
 
 	abc, _ := aes.NewCipher(ask[:])
 	ac, _ := cipher.NewGCM(abc)
-	aiv := make([]byte, 12)
+	aiv := make([]byte, 12) //Alice Initial Vector, the IV is public and should be sent with the message
 	io.ReadFull(rand.Reader, aiv)
 	ciphertext := ac.Seal(nil, aiv, []byte(textMsg), nil)
 	fmsg := append(aiv, ciphertext...)
@@ -48,7 +49,7 @@ func test() {
 	bbc, _ := aes.NewCipher(bsk[:])
 
 	bc, _ := cipher.NewGCM(bbc)
-	riv := fmsg[:12]
+	riv := fmsg[:12] // request IV maybe??
 	dmsg, _ := bc.Open(nil, riv, fmsg[12:], nil)
 	fmt.Println("bob decipher")
 	fmt.Println(string(dmsg))
