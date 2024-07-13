@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"fmt"
 	"testing"
 )
 
@@ -32,6 +33,7 @@ func TestEncode(t *testing.T) {
 		}
 	}
 }
+
 func TestEncodeSized(t *testing.T) {
 	cmd := Command{
 		Header{
@@ -87,7 +89,7 @@ func TestDecode(t *testing.T) {
 
 func TestDecodeSized(t *testing.T) {
 	source := []uint8{0xf0, 0x0f, 0x05, 0x0f, 0xf0, 0, 0, 0, 1, 0x01, 0, 0, 0, 2, 0x02, 0x03}
-	actual, err := DecodeSized(source, 2)
+	actual, err := DecodeSized(source)
 	if err != nil {
 		t.Fatalf("Could not decode data %v", err)
 	}

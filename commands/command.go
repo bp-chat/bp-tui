@@ -131,33 +131,40 @@ func Decode(source []uint8, argCount int) (*Command, error) {
 	}, nil
 }
 
-func DecodeSized(source []uint8, argCount int) (*Command, error) {
+func DecodeSized(source []uint8) (*Command, error) {
 	if len(source) < 5 {
 		return nil, errors.New("source is to small, it must be at least 5 bytes")
 	}
-	if argCount > 10 {
-		return nil, errors.New("It looks like to many args")
-	}
+	// if argCount > 10 {
+	// 	return nil, errors.New("It looks like to many args")
+	// }
 	var args [][]uint8
 	var i uint32
 	var lenSize uint32 = 4
+	var maxLen = uint32(len(source))
 
 	for i = 5; i < uint32(len(source)); {
 		valueIdx := i + lenSize
 		size := binary.BigEndian.Uint32(source[i:valueIdx])
+		if size == 0 {
+			break
+		}
 		endIdx := valueIdx + size
+		if endIdx > maxLen {
+			endIdx = maxLen
+		}
 		v := source[valueIdx:endIdx]
 		args = append(args, v)
 		i = endIdx
 	}
 
-	if len(args) != argCount {
-		msg := fmt.Sprintf(
-			"Argument count mismatch\nexpected:%v and found %v",
-			argCount,
-			len(args))
-		return nil, errors.New(msg)
-	}
+	// if len(args) != argCount {
+	// 	msg := fmt.Sprintf(
+	// 		"Argument count mismatch\nexpected:%v and found %v",
+	// 		argCount,
+	// 		len(args))
+	// 	return nil, errors.New(msg)
+	// }
 	commandId := binary.BigEndian.Uint16(source[3:5])
 	header := Header{
 		binary.BigEndian.Uint16(source[0:2]),

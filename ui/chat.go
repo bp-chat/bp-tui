@@ -16,16 +16,17 @@ import (
 )
 
 type Chat struct {
-	viewport    viewport.Model
-	messages    []string
-	textarea    textarea.Model
-	senderStyle lipgloss.Style
-	receipStyle lipgloss.Style
-	err         error
-	sendAction  func(string)
+	viewport     viewport.Model
+	messages     []string
+	textarea     textarea.Model
+	senderStyle  lipgloss.Style
+	receipStyle  lipgloss.Style
+	err          error
+	sendAction   func(string)
+	broadcastCmd func()
 }
 
-func New(send func(string)) Chat {
+func New(send func(string), tempCmd func()) Chat {
 	ta := textarea.New()
 	ta.Placeholder = "Send a message..."
 	ta.Focus()
@@ -47,13 +48,14 @@ Type a message and press Enter to send.`)
 	ta.KeyMap.InsertNewline.SetEnabled(false)
 
 	return Chat{
-		textarea:    ta,
-		messages:    []string{},
-		viewport:    vp,
-		senderStyle: lipgloss.NewStyle().Foreground(lipgloss.Color("5")),
-		receipStyle: lipgloss.NewStyle().Foreground(lipgloss.Color("4")),
-		err:         nil,
-		sendAction:  send,
+		textarea:     ta,
+		messages:     []string{},
+		viewport:     vp,
+		senderStyle:  lipgloss.NewStyle().Foreground(lipgloss.Color("5")),
+		receipStyle:  lipgloss.NewStyle().Foreground(lipgloss.Color("4")),
+		err:          nil,
+		sendAction:   send,
+		broadcastCmd: tempCmd,
 	}
 }
 
@@ -76,6 +78,9 @@ func (m Chat) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case tea.KeyCtrlC, tea.KeyEsc:
 			fmt.Println(m.textarea.Value())
 			return m, tea.Quit
+		case tea.KeyCtrlB:
+			m.broadcastCmd()
+			break
 		case tea.KeyEnter:
 			textMsg := m.textarea.Value()
 			m.messages = append(m.messages, m.senderStyle.Render("You: ")+textMsg)
@@ -92,11 +97,18 @@ func (m Chat) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.err = msg
 		return m, nil
 	case *commands.Command:
-		cmsg, _ := out.FromCommand(msg)
-		m.messages = append(m.messages, m.receipStyle.Render("One: ")+cmsg.Message)
-		m.viewport.SetContent(strings.Join(m.messages, "\n"))
-		m.viewport.GotoBottom()
-		return m, tea.Batch(tiCmd, vpCmd)
+		switch msg.Header.Id {
+		case commands.BKS:
+			m.messages = append(m.messages, "received keys\n")
+			break
+		case commands.MSG:
+			cmsg, _ := out.FromCommand(msg)
+			m.messages = append(m.messages, m.receipStyle.Render("One: ")+cmsg.Message)
+			m.viewport.SetContent(strings.Join(m.messages, "\n"))
+			m.viewport.GotoBottom()
+			return m, tea.Batch(tiCmd, vpCmd)
+		}
+		break
 	}
 	return m, tea.Batch(tiCmd, vpCmd)
 }

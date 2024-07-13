@@ -12,9 +12,10 @@ type CommandCode uint16
 
 const (
 	Undefined CommandCode = 0
-	CNN                   = 1
-	MSG                   = 2
-	RKS                   = 3
+	CNN                   = 1 //Connect
+	MSG                   = 2 //Message
+	RKS                   = 3 //Register Keys
+	BKS                   = 4 //Broadcast Keys, this command is temporary and must be removed
 )
 
 func NewHeader(id CommandCode, sync uint8) Header {

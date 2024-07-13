@@ -38,6 +38,8 @@ func main() {
 
 	p := tea.NewProgram(ui.New(func(nm string) {
 		send(conn, eu, nm)
+	}, func() {
+		broadcastCommand(conn)
 	}))
 	go listen(conn, p)
 	if _, err := p.Run(); err != nil {
@@ -53,7 +55,7 @@ func listen(cnn *connection, teaProgam *tea.Program) {
 		} else {
 			teaProgam.Send(bpMsg)
 		}
-		time.Sleep(2 * time.Second)
+		time.Sleep(1500 * time.Millisecond)
 	}
 }
 
@@ -63,6 +65,11 @@ func send(cnn *connection, user ephemeralUser, textMsg string) error {
 		Message:   textMsg,
 	}
 	return cnn.Send(msg)
+}
+
+func broadcastCommand(cnn *connection) error {
+	cmd := out.BroadcastKeys{}
+	return cnn.Send(cmd)
 }
 
 func registerE2eeKeys(cnn *connection, user ephemeralUser) error {
@@ -77,9 +84,12 @@ func registerE2eeKeys(cnn *connection, user ephemeralUser) error {
 }
 
 func getMessage(reader *bufio.Reader) string {
-	input, err := reader.ReadString('\n')
+	input, isPrefix, err := reader.ReadLine()
 	if err != nil {
 		log.Fatalf("Could not parse input\n%s\n", err)
 	}
-	return input
+	if isPrefix {
+		log.Fatalf("Use a smaller name my friend")
+	}
+	return string(input)
 }
