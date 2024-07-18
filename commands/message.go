@@ -1,32 +1,30 @@
-package out
+package commands
 
 import (
 	"bytes"
 	"encoding/binary"
-
-	"github.com/bp-chat/bp-tui/commands"
 )
 
 const MessageSize = 1024
 
 type Message struct {
-	Recipient commands.UserName
+	Recipient UserName
 	Message   [MessageSize]byte
 }
 
-func (m Message) ToCommand(syncId uint8) commands.Command {
+func (m Message) ToCommand(syncId uint8) Command {
 	buffer := new(bytes.Buffer)
 	_ = binary.Write(buffer, binary.BigEndian, m)
 
-	return commands.Command{
-		Header: commands.NewHeader(commands.MSG, syncId),
+	return Command{
+		Header: NewHeader(MSG, syncId),
 		Body:   buffer.Bytes(),
 	}
 }
 
-func FromCommand(cmd *commands.Command) (*Message, error) {
+func NewMessage(body []byte) (*Message, error) {
 	var msg Message
-	reader := bytes.NewReader(cmd.Body)
+	reader := bytes.NewReader(body)
 	if err := binary.Read(reader, binary.BigEndian, &msg); err != nil {
 		return nil, err
 	}

@@ -15,6 +15,8 @@ type Command struct {
 	Body []byte
 }
 
+type In = interface{}
+
 func (cmd *Command) Encode() ([]byte, error) {
 	buffer := new(bytes.Buffer)
 	if err := binary.Write(buffer, binary.BigEndian, cmd.Header); err != nil {
@@ -39,4 +41,15 @@ func Decode(source []byte) (*Command, error) {
 		header,
 		source[headerSize:],
 	}, nil
+}
+
+func (cmd *Command) Parse() (In, error) {
+	switch cmd.Header.Id {
+	case MSG:
+		return NewMessage(cmd.Body)
+	case BKS:
+		return NewRegisterKeys(cmd.Body)
+	default:
+		return nil, errors.New("default")
+	}
 }

@@ -8,7 +8,6 @@ import (
 	"strings"
 
 	"github.com/bp-chat/bp-tui/commands"
-	"github.com/bp-chat/bp-tui/commands/out"
 	"github.com/charmbracelet/bubbles/textarea"
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
@@ -102,8 +101,7 @@ func (m Chat) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.messages = append(m.messages, "received keys\n")
 			break
 		case commands.MSG:
-			cmsg, _ := out.FromCommand(msg)
-			m.messages = append(m.messages, m.receipStyle.Render("One: ")+string(cmsg.Message[:]))
+			m.messages = append(m.messages, m.receipStyle.Render("One: must learn how to parse first"))
 			m.viewport.SetContent(strings.Join(m.messages, "\n"))
 			m.viewport.GotoBottom()
 			return m, tea.Batch(tiCmd, vpCmd)

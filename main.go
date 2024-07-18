@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/bp-chat/bp-tui/commands"
-	"github.com/bp-chat/bp-tui/commands/out"
 	"github.com/bp-chat/bp-tui/ui"
 	tea "github.com/charmbracelet/bubbletea"
 )
@@ -65,23 +64,23 @@ func listen(cnn *connection, teaProgam *tea.Program) {
 
 func send(cnn *connection, user ephemeralUser, textMsg string) error {
 	msgBytes := []byte(textMsg)
-	if len(msgBytes) > out.MessageSize {
+	if len(msgBytes) > commands.MessageSize {
 		return errors.New("The message is to large")
 	}
-	msg := out.Message{
+	msg := commands.Message{
 		Recipient: user.name,
-		Message:   [out.MessageSize]byte(msgBytes),
+		Message:   [commands.MessageSize]byte(msgBytes),
 	}
 	return cnn.Send(msg)
 }
 
 func broadcastCommand(cnn *connection) error {
-	cmd := out.BroadcastKeys{}
+	cmd := commands.BroadcastKeys{}
 	return cnn.Send(cmd)
 }
 
 func registerE2eeKeys(cnn *connection, user ephemeralUser) error {
-	cmd := out.RegisterKeys{
+	cmd := commands.RegisterKeys{
 		User:         user.name,
 		IdKey:        [32]byte(user.keys.publicKey),
 		SignedKey:    [32]byte(user.keys.preKey.PublicKey().Bytes()),
