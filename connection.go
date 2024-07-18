@@ -33,8 +33,7 @@ func connect(address string) (*connection, error) {
 
 func (cnn *connection) Send(outCommand commands.IOut) error {
 	cmd := outCommand.ToCommand(15)
-	data, err := cmd.EncodeSized()
-	// log.Printf("\n%v: %x\n", len(data), data)
+	data, err := cmd.Encode()
 	if err != nil {
 		return err
 	}
@@ -53,7 +52,7 @@ func (cnn *connection) Receive() (*commands.Command, error) {
 		return nil, err
 	}
 	log.Printf("%v", len(buffer))
-	cmd, err := commands.DecodeSized(buffer)
+	cmd, err := commands.Decode(buffer)
 	if err != nil {
 		log.Printf("could not parse data\n%s\n", err)
 		return nil, err

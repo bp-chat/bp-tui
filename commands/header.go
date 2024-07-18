@@ -1,10 +1,14 @@
 package commands
 
+type UserName = [16]byte
+
 type Header struct {
 	Version uint16
 	SyncId  uint8
 	Id      CommandCode
 }
+
+const headerSize = 5
 
 const version uint16 = 0
 

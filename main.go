@@ -2,18 +2,20 @@ package main
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"log"
 	"os"
 	"time"
 
+	"github.com/bp-chat/bp-tui/commands"
 	"github.com/bp-chat/bp-tui/commands/out"
 	"github.com/bp-chat/bp-tui/ui"
 	tea "github.com/charmbracelet/bubbletea"
 )
 
 type ephemeralUser struct {
-	name string
+	name commands.UserName
 	keys KeySet
 }
 
@@ -22,9 +24,11 @@ const Host string = "127.0.0.1:6680"
 func main() {
 	fmt.Printf("\n\nWho are you\n")
 	reader := bufio.NewReader(os.Stdin)
-	name := getMessage(reader)
+	name := []byte(getMessage(reader))
+	var username [16]byte
+	copy(username[:], name[:])
 	eu := ephemeralUser{
-		name: name,
+		name: username,
 		keys: CreateKeys(),
 	}
 	log.Printf("trying to connect to %s...\n", Host)
@@ -60,9 +64,13 @@ func listen(cnn *connection, teaProgam *tea.Program) {
 }
 
 func send(cnn *connection, user ephemeralUser, textMsg string) error {
+	msgBytes := []byte(textMsg)
+	if len(msgBytes) > out.MessageSize {
+		return errors.New("The message is to large")
+	}
 	msg := out.Message{
 		Recipient: user.name,
-		Message:   textMsg,
+		Message:   [out.MessageSize]byte(msgBytes),
 	}
 	return cnn.Send(msg)
 }
@@ -75,10 +83,10 @@ func broadcastCommand(cnn *connection) error {
 func registerE2eeKeys(cnn *connection, user ephemeralUser) error {
 	cmd := out.RegisterKeys{
 		User:         user.name,
-		IdKey:        user.keys.publicKey,
-		SignedKey:    user.keys.preKey.PublicKey().Bytes(),
-		Signature:    user.keys.signature,
-		EphemeralKey: user.keys.ek.PublicKey().Bytes(),
+		IdKey:        [32]byte(user.keys.publicKey),
+		SignedKey:    [32]byte(user.keys.preKey.PublicKey().Bytes()),
+		Signature:    [64]byte(user.keys.signature),
+		EphemeralKey: [32]byte(user.keys.ek.PublicKey().Bytes()),
 	}
 	return cnn.Send(cmd)
 }

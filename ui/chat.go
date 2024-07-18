@@ -103,7 +103,7 @@ func (m Chat) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			break
 		case commands.MSG:
 			cmsg, _ := out.FromCommand(msg)
-			m.messages = append(m.messages, m.receipStyle.Render("One: ")+cmsg.Message)
+			m.messages = append(m.messages, m.receipStyle.Render("One: ")+string(cmsg.Message[:]))
 			m.viewport.SetContent(strings.Join(m.messages, "\n"))
 			m.viewport.GotoBottom()
 			return m, tea.Batch(tiCmd, vpCmd)

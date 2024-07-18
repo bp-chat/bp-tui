@@ -1,33 +1,27 @@
 package out
 
 import (
-	"fmt"
+	"bytes"
+	"encoding/binary"
 
 	"github.com/bp-chat/bp-tui/commands"
 )
 
 type RegisterKeys struct {
-	User         string
-	IdKey        []byte
-	SignedKey    []byte
-	Signature    []byte
-	EphemeralKey []byte //will be removed later when we implement a direct way of communication
-	EphemeralSig []byte //this too
+	User         commands.UserName
+	IdKey        [32]byte
+	SignedKey    [32]byte
+	Signature    [64]byte
+	EphemeralKey [32]byte //will be removed later when we implement a direct way of communication
 }
 
 // ToCommand implements commands.IOut.
 func (r RegisterKeys) ToCommand(syncId uint8) commands.Command {
-	fmt.Printf("\n keys to command parse")
-	fmt.Printf("\n idkey: %x", r.IdKey)
+	buffer := new(bytes.Buffer)
+	_ = binary.Write(buffer, binary.BigEndian, r)
+
 	return commands.Command{
 		Header: commands.NewHeader(commands.RKS, syncId),
-		Args: [][]byte{
-			[]byte(r.User),
-			r.IdKey,
-			r.SignedKey,
-			r.Signature,
-			r.EphemeralKey,
-			r.EphemeralSig,
-		},
+		Body:   buffer.Bytes(),
 	}
 }
