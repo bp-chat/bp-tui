@@ -5,7 +5,7 @@ import (
 	"encoding/binary"
 )
 
-const RegisterKeysSize = 300
+const RegisterKeysSize = 176
 
 type RegisterKeys struct {
 	User         UserName
