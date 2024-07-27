@@ -97,9 +97,6 @@ func (m Chat) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 	case *commands.Command:
 		switch msg.Header.Id {
-		case commands.BKS:
-			m.messages = append(m.messages, "received keys\n")
-			break
 		case commands.MSG:
 			m.messages = append(m.messages, m.receipStyle.Render("One: must learn how to parse first"))
 			m.viewport.SetContent(strings.Join(m.messages, "\n"))

@@ -44,7 +44,7 @@ func (cnn *connection) Send(outCommand commands.IOut) error {
 }
 
 func (cnn *connection) Receive() (*commands.Command, error) {
-	buffer := make([]byte, 4000)
+	buffer := make([]byte, 4096)
 	_, err := cnn.reader.Read(buffer)
 	if err != nil {
 		log.Printf("err: %v", err)

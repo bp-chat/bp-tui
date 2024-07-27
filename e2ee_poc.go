@@ -7,50 +7,43 @@ import (
 	"crypto/ed25519"
 	"crypto/rand"
 	"crypto/sha256"
+	"errors"
 	"fmt"
 	"io"
 )
 
+const ivSize = 12
+
 type KeySet struct {
-	privateKey ed25519.PrivateKey
-	publicKey  ed25519.PublicKey
-	preKey     *ecdh.PrivateKey
-	ek         *ecdh.PrivateKey
-	signature  []byte
+	privateKey ed25519.PrivateKey //Private component of identity key
+	publicKey  ed25519.PublicKey  // public component of identity key
+	preKey     *ecdh.PrivateKey   // This pre signed key is a temporary identity key
+	ek         *ecdh.PrivateKey   // this ephemeral key should be created for each exchange
+	signature  []byte             // signature, used to authenticate the preKey.
+}
+
+type PublicKeySet struct {
+	identityKey  []byte
+	signedKey    []byte
+	ephemeralkey []byte
+	signature    []byte
 }
 
 func test() {
 	//TODO understand GCM https://en.wikipedia.org/wiki/Galois/Counter_Mode
-	//for some reason when using this mode we don't need to do mac or data
+	//for some reason when using this mode we don't need to mac or data
 	alice := CreateKeys()
+	alicePublic := convertKeys(alice)
 	bob := CreateKeys()
+	bobPublic := convertKeys(bob)
 	textMsg := "hello bob, how are you?"
 
-	isValidSignature := ed25519.Verify(bob.publicKey, bob.preKey.PublicKey().Bytes(), bob.signature)
-	if isValidSignature == false {
-		fmt.Println("Could not verify signature")
-	}
+	ask, _ := CreateSharedKey(alice, bobPublic)
 
-	adhe, _ := alice.ek.ECDH(bob.preKey.PublicKey()) //create ephemeral key
-	adhi, _ := alice.preKey.ECDH(bob.ek.PublicKey()) //create identity key
-	ask := sha256.Sum256(append(adhe, adhi...))      //append both to create a shared key Alice_Shared_Key
+	fmsg, _ := Encrypt(ask[:], []byte(textMsg))
 
-	abc, _ := aes.NewCipher(ask[:])
-	ac, _ := cipher.NewGCM(abc)
-	aiv := make([]byte, 12) //Alice Initial Vector, the IV is public and should be sent with the message
-	io.ReadFull(rand.Reader, aiv)
-	ciphertext := ac.Seal(nil, aiv, []byte(textMsg), nil)
-	fmsg := append(aiv, ciphertext...)
-
-	bdhe, _ := bob.ek.ECDH(alice.preKey.PublicKey())
-	bdhi, _ := bob.preKey.ECDH(alice.ek.PublicKey())
-	// I don't like that it's necessary to preserve order but it's ok... I guess...
-	bsk := sha256.Sum256(append(bdhi, bdhe...))
-	bbc, _ := aes.NewCipher(bsk[:])
-
-	bc, _ := cipher.NewGCM(bbc)
-	riv := fmsg[:12] // request IV maybe??
-	dmsg, _ := bc.Open(nil, riv, fmsg[12:], nil)
+	bsk, _ := CreateSharedKey(bob, alicePublic)
+	dmsg, _ := Decrypt(bsk[:], fmsg)
 	fmt.Println("bob decipher")
 	fmt.Println(string(dmsg))
 
@@ -70,4 +63,76 @@ func CreateKeys() KeySet {
 		ek,
 		sinature,
 	}
+}
+
+func isValidKey(keys PublicKeySet) bool {
+	return ed25519.Verify(keys.identityKey, keys.signedKey, keys.signature)
+}
+
+func convertKeys(other KeySet) PublicKeySet {
+	return PublicKeySet{
+		identityKey:  other.publicKey,
+		signedKey:    other.preKey.PublicKey().Bytes(),
+		ephemeralkey: other.ek.Bytes(),
+		signature:    other.signature,
+	}
+}
+
+func CreateSharedKey(own KeySet, other PublicKeySet) ([sha256.Size]byte, error) {
+	empty := [sha256.Size]byte{}
+	if isValidKey(other) == false {
+		return empty, errors.New("Invalid signed key")
+	}
+
+	otherIK, err := ecdh.P256().NewPublicKey(other.identityKey)
+	if err != nil {
+		return empty, err
+	}
+	otherEK, err := ecdh.P256().NewPublicKey(other.ephemeralkey)
+	if err != nil {
+		return empty, err
+	}
+
+	dhi, err := own.preKey.ECDH(otherEK)
+	if err != nil {
+		return empty, err
+	}
+	dhe, err := own.ek.ECDH(otherIK)
+	if err != nil {
+		return empty, err
+	}
+	combined := make([]byte, len(dhe))
+	for i := 0; i < len(dhi); i++ {
+		combined[i] = dhi[i] ^ dhe[i] //TODO find a better way to combine both
+	}
+	return sha256.Sum256(combined), nil
+}
+func Encrypt(sharedKey []byte, message []byte) ([]byte, error) {
+	empty := []byte{}
+	aesBlock, err := aes.NewCipher(sharedKey[:])
+	if err != nil {
+		return empty, err
+	}
+	gcmCipher, err := cipher.NewGCM(aesBlock)
+	if err != nil {
+		return empty, err
+	}
+	initialVector := make([]byte, ivSize)
+	io.ReadFull(rand.Reader, initialVector)
+	ciphertext := gcmCipher.Seal(nil, initialVector, message, nil)
+	return append(initialVector, ciphertext...), nil
+}
+
+func Decrypt(sharedKey []byte, message []byte) ([]byte, error) {
+	empty := []byte{}
+	aesBlock, err := aes.NewCipher(sharedKey[:])
+	if err != nil {
+		return empty, err
+	}
+	gcmCipher, err := cipher.NewGCM(aesBlock)
+	if err != nil {
+		return empty, err
+	}
+	initialVector := message[:ivSize]
+	return gcmCipher.Open(nil, initialVector, message[ivSize:], nil)
 }

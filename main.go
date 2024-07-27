@@ -21,10 +21,11 @@ type ephemeralUser struct {
 const Host string = "127.0.0.1:6680"
 
 func main() {
+	test()
 	fmt.Printf("\n\nWho are you\n")
 	reader := bufio.NewReader(os.Stdin)
 	name := []byte(getMessage(reader))
-	var username [16]byte
+	var username commands.UserName
 	copy(username[:], name[:])
 	eu := ephemeralUser{
 		name: username,
@@ -44,19 +45,38 @@ func main() {
 	}, func() {
 		broadcastCommand(conn)
 	}))
-	go listen(conn, p)
+	go listen(conn, p, eu)
 	if _, err := p.Run(); err != nil {
 		log.Fatal(err)
 	}
 }
 
-func listen(cnn *connection, teaProgam *tea.Program) {
+func listen(cnn *connection, teaProgam *tea.Program, eu ephemeralUser) {
+	var sharedKey [32]byte
 	for cnn.IsOpen() {
 		bpMsg, err := cnn.Receive()
 		if err != nil {
 			teaProgam.Send(err)
 		} else {
-			teaProgam.Send(bpMsg)
+			switch bpMsg.Header.Id {
+			case commands.RKS:
+				other, err := commands.NewRegisterKeys(bpMsg.Body)
+				if err != nil {
+					teaProgam.Send(err)
+				}
+				otherKeys := PublicKeySet{
+					identityKey:  other.IdKey[:],
+					signedKey:    other.SignedKey[:],
+					ephemeralkey: other.EphemeralKey[:],
+					signature:    other.Signature[:],
+				}
+				sharedKey, err = CreateSharedKey(eu.keys, otherKeys)
+				fmt.Printf("\ncreated sk {%x}\n", sharedKey)
+				break
+			case commands.MSG:
+				teaProgam.Send(bpMsg)
+				break
+			}
 		}
 		time.Sleep(1500 * time.Millisecond)
 	}
