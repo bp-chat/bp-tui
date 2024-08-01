@@ -2,9 +2,11 @@ package main
 
 import (
 	"bufio"
-	"github.com/bp-chat/bp-tui/commands"
+	"fmt"
 	"log"
 	"net"
+
+	"github.com/bp-chat/bp-tui/commands"
 )
 
 type connection struct {
@@ -38,6 +40,7 @@ func (cnn *connection) Send(outCommand commands.IOut) error {
 		return err
 	}
 	if _, err = cnn.writer.Write(data); err != nil {
+		fmt.Printf("failed to send data: %x", data)
 		return err
 	}
 	return cnn.writer.Flush()

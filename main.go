@@ -21,7 +21,6 @@ type ephemeralUser struct {
 const Host string = "127.0.0.1:6680"
 
 func main() {
-	test()
 	fmt.Printf("\n\nWho are you\n")
 	reader := bufio.NewReader(os.Stdin)
 	name := []byte(getMessage(reader))
@@ -71,7 +70,7 @@ func listen(cnn *connection, teaProgam *tea.Program, eu ephemeralUser) {
 					signature:    other.Signature[:],
 				}
 				sharedKey, err = CreateSharedKey(eu.keys, otherKeys)
-				fmt.Printf("\ncreated sk {%x}\n", sharedKey)
+				fmt.Printf("\ncreated sk %x\n", sharedKey)
 				break
 			case commands.MSG:
 				teaProgam.Send(bpMsg)
@@ -87,9 +86,11 @@ func send(cnn *connection, user ephemeralUser, textMsg string) error {
 	if len(msgBytes) > commands.MessageSize {
 		return errors.New("The message is to large")
 	}
+	var fixedSizeMessage [commands.MessageSize]byte
+	copy(fixedSizeMessage[:], msgBytes)
 	msg := commands.Message{
 		Recipient: user.name,
-		Message:   [commands.MessageSize]byte(msgBytes),
+		Message:   fixedSizeMessage,
 	}
 	return cnn.Send(msg)
 }

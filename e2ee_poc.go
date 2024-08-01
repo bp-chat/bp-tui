@@ -73,23 +73,26 @@ func convertKeys(other KeySet) PublicKeySet {
 	return PublicKeySet{
 		identityKey:  other.publicKey,
 		signedKey:    other.preKey.PublicKey().Bytes(),
-		ephemeralkey: other.ek.Bytes(),
+		ephemeralkey: other.ek.PublicKey().Bytes(),
 		signature:    other.signature,
 	}
 }
 
 func CreateSharedKey(own KeySet, other PublicKeySet) ([sha256.Size]byte, error) {
 	empty := [sha256.Size]byte{}
+	curve := ecdh.X25519()
 	if isValidKey(other) == false {
 		return empty, errors.New("Invalid signed key")
 	}
 
-	otherIK, err := ecdh.P256().NewPublicKey(other.identityKey)
+	otherIK, err := curve.NewPublicKey(other.signedKey)
 	if err != nil {
+		fmt.Println("invalid pk on signed")
 		return empty, err
 	}
-	otherEK, err := ecdh.P256().NewPublicKey(other.ephemeralkey)
+	otherEK, err := curve.NewPublicKey(other.ephemeralkey)
 	if err != nil {
+		fmt.Println("invalid pk on ephemeral")
 		return empty, err
 	}
 
