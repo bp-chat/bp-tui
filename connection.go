@@ -54,7 +54,6 @@ func (cnn *connection) Receive() (*commands.Command, error) {
 		cnn.receivedEof = true
 		return nil, err
 	}
-	log.Printf("%v", len(buffer))
 	cmd, err := commands.Decode(buffer)
 	if err != nil {
 		log.Printf("could not parse data\n%s\n", err)

@@ -5,11 +5,13 @@ import (
 	"encoding/binary"
 )
 
-const MessageSize = 1024
+const MessageSize = 980
 
 type Message struct {
-	Recipient UserName
-	Message   [MessageSize]byte
+	Recipient     UserName
+	InitialVector [12]byte //TODO READ IV SIZE from e2ee
+	Len           int32
+	Message       [MessageSize]byte
 }
 
 func (m Message) ToCommand(syncId uint8) Command {

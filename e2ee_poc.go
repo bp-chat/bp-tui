@@ -14,6 +14,8 @@ import (
 
 const ivSize = 12
 
+type InitialVector = [ivSize]byte
+
 type KeySet struct {
 	privateKey ed25519.PrivateKey //Private component of identity key
 	publicKey  ed25519.PublicKey  // public component of identity key
@@ -40,10 +42,10 @@ func test() {
 
 	ask, _ := CreateSharedKey(alice, bobPublic)
 
-	fmsg, _ := Encrypt(ask[:], []byte(textMsg))
+	iv, fmsg, _ := Encrypt(ask[:], []byte(textMsg))
 
 	bsk, _ := CreateSharedKey(bob, alicePublic)
-	dmsg, _ := Decrypt(bsk[:], fmsg)
+	dmsg, _ := Decrypt(bsk[:], iv, fmsg)
 	fmt.Println("bob decipher")
 	fmt.Println(string(dmsg))
 
@@ -87,12 +89,10 @@ func CreateSharedKey(own KeySet, other PublicKeySet) ([sha256.Size]byte, error) 
 
 	otherIK, err := curve.NewPublicKey(other.signedKey)
 	if err != nil {
-		fmt.Println("invalid pk on signed")
 		return empty, err
 	}
 	otherEK, err := curve.NewPublicKey(other.ephemeralkey)
 	if err != nil {
-		fmt.Println("invalid pk on ephemeral")
 		return empty, err
 	}
 
@@ -110,23 +110,25 @@ func CreateSharedKey(own KeySet, other PublicKeySet) ([sha256.Size]byte, error) 
 	}
 	return sha256.Sum256(combined), nil
 }
-func Encrypt(sharedKey []byte, message []byte) ([]byte, error) {
+
+// returns the Initial Vector and the encrypted message
+func Encrypt(sharedKey []byte, message []byte) (InitialVector, []byte, error) {
 	empty := []byte{}
 	aesBlock, err := aes.NewCipher(sharedKey[:])
 	if err != nil {
-		return empty, err
+		return [ivSize]byte{}, empty, err
 	}
 	gcmCipher, err := cipher.NewGCM(aesBlock)
 	if err != nil {
-		return empty, err
+		return [ivSize]byte{}, empty, err
 	}
-	initialVector := make([]byte, ivSize)
-	io.ReadFull(rand.Reader, initialVector)
-	ciphertext := gcmCipher.Seal(nil, initialVector, message, nil)
-	return append(initialVector, ciphertext...), nil
+	initialVector := [ivSize]byte{}
+	io.ReadFull(rand.Reader, initialVector[:])
+	ciphertext := gcmCipher.Seal(nil, initialVector[:], message, nil)
+	return initialVector, ciphertext, nil
 }
 
-func Decrypt(sharedKey []byte, message []byte) ([]byte, error) {
+func Decrypt(sharedKey []byte, initialVector InitialVector, message []byte) ([]byte, error) {
 	empty := []byte{}
 	aesBlock, err := aes.NewCipher(sharedKey[:])
 	if err != nil {
@@ -136,6 +138,5 @@ func Decrypt(sharedKey []byte, message []byte) ([]byte, error) {
 	if err != nil {
 		return empty, err
 	}
-	initialVector := message[:ivSize]
-	return gcmCipher.Open(nil, initialVector, message[ivSize:], nil)
+	return gcmCipher.Open(nil, initialVector[:], message, nil)
 }

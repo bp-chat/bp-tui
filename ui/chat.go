@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/bp-chat/bp-tui/commands"
 	"github.com/charmbracelet/bubbles/textarea"
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
@@ -21,11 +20,16 @@ type Chat struct {
 	senderStyle  lipgloss.Style
 	receipStyle  lipgloss.Style
 	err          error
-	sendAction   func(string)
+	sendAction   func(string) error
 	broadcastCmd func()
 }
 
-func New(send func(string), tempCmd func()) Chat {
+type Message struct {
+	From    string
+	Message string
+}
+
+func New(send func(string) error, broadcastCommand func()) Chat {
 	ta := textarea.New()
 	ta.Placeholder = "Send a message..."
 	ta.Focus()
@@ -54,7 +58,7 @@ Type a message and press Enter to send.`)
 		receipStyle:  lipgloss.NewStyle().Foreground(lipgloss.Color("4")),
 		err:          nil,
 		sendAction:   send,
-		broadcastCmd: tempCmd,
+		broadcastCmd: broadcastCommand,
 	}
 }
 
@@ -77,33 +81,27 @@ func (m Chat) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case tea.KeyCtrlC, tea.KeyEsc:
 			fmt.Println(m.textarea.Value())
 			return m, tea.Quit
-		case tea.KeyCtrlB:
+		case tea.KeyCtrlW:
 			m.broadcastCmd()
 			break
 		case tea.KeyEnter:
 			textMsg := m.textarea.Value()
 			m.messages = append(m.messages, m.senderStyle.Render("You: ")+textMsg)
 			m.viewport.SetContent(strings.Join(m.messages, "\n"))
-			m.sendAction(textMsg)
+			m.err = m.sendAction(textMsg)
 			m.textarea.Reset()
 			m.viewport.GotoBottom()
 		}
 		break
-
-		// We handle errors just like any other message
-		//this probably worked in a previous version
+	case Message:
+		txt := fmt.Sprintf("%s: %s \n", msg.From, msg.Message)
+		m.messages = append(m.messages, m.receipStyle.Render(txt))
+		m.viewport.SetContent(strings.Join(m.messages, "\n"))
+		m.viewport.GotoBottom()
+		return m, tea.Batch(tiCmd, vpCmd)
 	case error:
 		m.err = msg
 		return m, nil
-	case *commands.Command:
-		switch msg.Header.Id {
-		case commands.MSG:
-			m.messages = append(m.messages, m.receipStyle.Render("One: must learn how to parse first"))
-			m.viewport.SetContent(strings.Join(m.messages, "\n"))
-			m.viewport.GotoBottom()
-			return m, tea.Batch(tiCmd, vpCmd)
-		}
-		break
 	}
 	return m, tea.Batch(tiCmd, vpCmd)
 }
@@ -111,7 +109,8 @@ func (m Chat) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (m Chat) View() string {
 	var s string
 	s = fmt.Sprintf(
-		"%s\n\n%s\n\n",
+		"\n\n%v\n\n%s\n\n%s\n\n",
+		m.err,
 		m.viewport.View(),
 		m.textarea.View(),
 	)
