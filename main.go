@@ -20,6 +20,7 @@ type ephemeralUser struct {
 }
 
 const Host string = "127.0.0.1:6680"
+const MaxNumberOfCommands int = 16
 
 func main() {
 	fmt.Printf("\n\nWho are you\n")

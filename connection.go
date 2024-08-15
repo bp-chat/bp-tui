@@ -14,6 +14,7 @@ type connection struct {
 	reader      bufio.Reader
 	writer      bufio.Writer
 	receivedEof bool
+	queue       CommandQueue
 }
 
 func (cnn *connection) IsOpen() bool {
@@ -30,11 +31,17 @@ func connect(address string) (*connection, error) {
 		*bufio.NewReader(conn),
 		*bufio.NewWriter(conn),
 		false,
+		CreateCommandQueue(),
 	}, nil
 }
 
 func (cnn *connection) Send(outCommand commands.IOut) error {
-	cmd := outCommand.ToCommand(15)
+	cmdId, err := cnn.queue.TakeSlot()
+	if err != nil {
+		cnn.queue.Enqueue(outCommand)
+		return nil
+	}
+	cmd := outCommand.ToCommand(uint8(cmdId))
 	data, err := cmd.Encode()
 	if err != nil {
 		return err
@@ -44,6 +51,19 @@ func (cnn *connection) Send(outCommand commands.IOut) error {
 		return err
 	}
 	return cnn.writer.Flush()
+}
+
+func (cnn *connection) FreeCommandSlot(slot int) {
+	cnn.queue.Free(slot)
+}
+
+func (cnn *connection) SendNext() error {
+	out, err := cnn.queue.Pop()
+	if err != nil {
+		//the list is empty, there is no need to do anything special
+		return nil
+	}
+	return cnn.Send(*out)
 }
 
 func (cnn *connection) Receive() (*commands.Command, error) {
