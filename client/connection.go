@@ -9,7 +9,7 @@ import (
 	"github.com/bp-chat/bp-tui/commands"
 )
 
-type connection struct {
+type Connection struct {
 	conn        net.Conn
 	reader      bufio.Reader
 	writer      bufio.Writer
@@ -17,16 +17,16 @@ type connection struct {
 	queue       CommandQueue
 }
 
-func (cnn *connection) IsOpen() bool {
+func (cnn *Connection) IsOpen() bool {
 	return cnn.receivedEof == false
 }
 
-func connect(address string) (*connection, error) {
+func Connect(address string) (*Connection, error) {
 	conn, err := net.Dial("tcp", address)
 	if err != nil {
 		return nil, err
 	}
-	return &connection{
+	return &Connection{
 		conn,
 		*bufio.NewReader(conn),
 		*bufio.NewWriter(conn),
@@ -35,7 +35,7 @@ func connect(address string) (*connection, error) {
 	}, nil
 }
 
-func (cnn *connection) Send(outCommand commands.IOut) error {
+func (cnn *Connection) Send(outCommand commands.IOut) error {
 	cmdId, err := cnn.queue.TakeSlot()
 	if err != nil {
 		cnn.queue.Enqueue(outCommand)
@@ -53,11 +53,11 @@ func (cnn *connection) Send(outCommand commands.IOut) error {
 	return cnn.writer.Flush()
 }
 
-func (cnn *connection) FreeCommandSlot(slot int) {
+func (cnn *Connection) FreeCommandSlot(slot int) {
 	cnn.queue.Free(slot)
 }
 
-func (cnn *connection) SendNext() error {
+func (cnn *Connection) SendNext() error {
 	out, err := cnn.queue.Pop()
 	if err != nil {
 		//the list is empty, there is no need to do anything special
@@ -66,7 +66,7 @@ func (cnn *connection) SendNext() error {
 	return cnn.Send(*out)
 }
 
-func (cnn *connection) Receive() (*commands.Command, error) {
+func (cnn *Connection) Receive() (*commands.Command, error) {
 	buffer := make([]byte, 4096)
 	_, err := cnn.reader.Read(buffer)
 	if err != nil {
@@ -82,6 +82,6 @@ func (cnn *connection) Receive() (*commands.Command, error) {
 	return cmd, nil
 }
 
-func (cnn *connection) Close() {
+func (cnn *Connection) Close() {
 	cnn.conn.Close()
 }

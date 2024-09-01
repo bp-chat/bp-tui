@@ -17,18 +17,18 @@ const ivSize = 12
 type InitialVector = [ivSize]byte
 
 type KeySet struct {
-	privateKey ed25519.PrivateKey //Private component of identity key
-	publicKey  ed25519.PublicKey  // public component of identity key
-	preKey     *ecdh.PrivateKey   // This pre signed key is a temporary identity key
-	ek         *ecdh.PrivateKey   // this ephemeral key should be created for each exchange
-	signature  []byte             // signature, used to authenticate the preKey.
+	PrivateKey ed25519.PrivateKey //Private component of identity key
+	PublicKey  ed25519.PublicKey  // public component of identity key
+	PreKey     *ecdh.PrivateKey   // This pre signed key is a temporary identity key
+	Ek         *ecdh.PrivateKey   // this ephemeral key should be created for each exchange
+	Signature  []byte             // signature, used to authenticate the preKey.
 }
 
 type PublicKeySet struct {
-	identityKey  []byte
-	signedKey    []byte
-	ephemeralkey []byte
-	signature    []byte
+	IdentityKey  []byte
+	SignedKey    []byte
+	Ephemeralkey []byte
+	Signature    []byte
 }
 
 func test() {
@@ -68,15 +68,15 @@ func CreateKeys() KeySet {
 }
 
 func isValidKey(keys PublicKeySet) bool {
-	return ed25519.Verify(keys.identityKey, keys.signedKey, keys.signature)
+	return ed25519.Verify(keys.IdentityKey, keys.SignedKey, keys.Signature)
 }
 
 func convertKeys(other KeySet) PublicKeySet {
 	return PublicKeySet{
-		identityKey:  other.publicKey,
-		signedKey:    other.preKey.PublicKey().Bytes(),
-		ephemeralkey: other.ek.PublicKey().Bytes(),
-		signature:    other.signature,
+		IdentityKey:  other.PublicKey,
+		SignedKey:    other.PreKey.PublicKey().Bytes(),
+		Ephemeralkey: other.Ek.PublicKey().Bytes(),
+		Signature:    other.Signature,
 	}
 }
 
@@ -87,20 +87,20 @@ func CreateSharedKey(own KeySet, other PublicKeySet) ([sha256.Size]byte, error) 
 		return empty, errors.New("Invalid signed key")
 	}
 
-	otherIK, err := curve.NewPublicKey(other.signedKey)
+	otherIK, err := curve.NewPublicKey(other.SignedKey)
 	if err != nil {
 		return empty, err
 	}
-	otherEK, err := curve.NewPublicKey(other.ephemeralkey)
+	otherEK, err := curve.NewPublicKey(other.Ephemeralkey)
 	if err != nil {
 		return empty, err
 	}
 
-	dhi, err := own.preKey.ECDH(otherEK)
+	dhi, err := own.PreKey.ECDH(otherEK)
 	if err != nil {
 		return empty, err
 	}
-	dhe, err := own.ek.ECDH(otherIK)
+	dhe, err := own.Ek.ECDH(otherIK)
 	if err != nil {
 		return empty, err
 	}

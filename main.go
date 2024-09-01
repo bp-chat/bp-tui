@@ -4,12 +4,13 @@ import (
 	"bufio"
 	"errors"
 	"fmt"
-	"github.com/bp-chat/bp-tui/client"
+	"log"
+	"os"
+
+	cl "github.com/bp-chat/bp-tui/client"
 	"github.com/bp-chat/bp-tui/commands"
 	"github.com/bp-chat/bp-tui/ui"
 	tea "github.com/charmbracelet/bubbletea"
-	"log"
-	"os"
 )
 
 const Host string = "127.0.0.1:6680"
@@ -20,21 +21,18 @@ func main() {
 	name := []byte(getMessage(reader))
 	var username commands.UserName
 	copy(username[:], name[:])
-	eu := EphemeralUser{
-		name: username,
-		keys: CreateKeys(),
+	eu := cl.EphemeralUser{
+		Name: username,
+		Keys: cl.CreateKeys(),
 	}
 	log.Printf("trying to connect to %s...\n", Host)
-	conn, err := connect(Host)
+	conn, err := cl.Connect(Host)
 	if err != nil {
 		log.Fatalf("Could not connect to %s\n%s\n", Host, err)
 	}
 	defer conn.Close()
 	log.Printf("Connected to %s...\n", Host)
-	client := Client{
-		eu,
-		conn,
-	}
+	client := cl.New(eu, conn)
 	registerE2eeKeys(conn, eu)
 	client.RefreshKeys()
 
@@ -49,7 +47,7 @@ func main() {
 	}
 }
 
-func listen(cnn *connection, teaProgam *tea.Program, eu *ephemeralUser) {
+func listen(cnn *cl.Connection, teaProgam *tea.Program, eu *cl.EphemeralUser) {
 	for cnn.IsOpen() {
 		bpMsg, err := cnn.Receive()
 		if err != nil {
@@ -62,21 +60,21 @@ func listen(cnn *connection, teaProgam *tea.Program, eu *ephemeralUser) {
 			if err != nil {
 				teaProgam.Send(err)
 			}
-			otherKeys := PublicKeySet{
-				identityKey:  other.IdKey[:],
-				signedKey:    other.SignedKey[:],
-				ephemeralkey: other.EphemeralKey[:],
-				signature:    other.Signature[:],
+			otherKeys := cl.PublicKeySet{
+				IdentityKey:  other.IdKey[:],
+				SignedKey:    other.SignedKey[:],
+				Ephemeralkey: other.EphemeralKey[:],
+				Signature:    other.Signature[:],
 			}
-			eu.sharedKey, err = CreateSharedKey(eu.keys, otherKeys)
+			eu.SharedKey, err = cl.CreateSharedKey(eu.Keys, otherKeys)
 			if err != nil {
 				teaProgam.Send(err)
 				break
 			}
-			eu.isKeySet = true
+			eu.IsKeySet = true
 			break
 		case commands.MSG:
-			if eu.isKeySet == false {
+			if eu.IsKeySet == false {
 				teaProgam.Send(errors.New("shared was not created"))
 				break
 			}
@@ -85,7 +83,7 @@ func listen(cnn *connection, teaProgam *tea.Program, eu *ephemeralUser) {
 				teaProgam.Send(err)
 				break
 			}
-			decrypted, err := Decrypt(eu.sharedKey[:], encryptedMessage.InitialVector, encryptedMessage.Message[:encryptedMessage.Len])
+			decrypted, err := cl.Decrypt(eu.SharedKey[:], encryptedMessage.InitialVector, encryptedMessage.Message[:encryptedMessage.Len])
 			if err != nil {
 				teaProgam.Send(err)
 				break
@@ -102,15 +100,15 @@ func listen(cnn *connection, teaProgam *tea.Program, eu *ephemeralUser) {
 	}
 }
 
-func send(cnn *connection, user *ephemeralUser, textMsg string) error {
-	if user.isKeySet == false {
+func send(cnn *cl.Connection, user *cl.EphemeralUser, textMsg string) error {
+	if user.IsKeySet == false {
 		return errors.New("Shared key not setted yeat")
 	}
 	msgBytes := []byte(textMsg)
 	if len(msgBytes) > commands.MessageSize {
 		return errors.New("The message is to large")
 	}
-	iv, encrypted, err := Encrypt(user.sharedKey[:], msgBytes)
+	iv, encrypted, err := cl.Encrypt(user.SharedKey[:], msgBytes)
 	if err != nil {
 		return err
 	}
@@ -121,7 +119,7 @@ func send(cnn *connection, user *ephemeralUser, textMsg string) error {
 	msgb := make([]byte, commands.MessageSize)
 	copy(msgb, encrypted)
 	msg := commands.Message{
-		Recipient:     user.name,
+		Recipient:     user.Name,
 		InitialVector: iv,
 		Len:           int32(mlen),
 		Message:       [commands.MessageSize]byte(msgb),
@@ -129,18 +127,18 @@ func send(cnn *connection, user *ephemeralUser, textMsg string) error {
 	return cnn.Send(msg)
 }
 
-func broadcastCommand(cnn *connection) error {
+func broadcastCommand(cnn *cl.Connection) error {
 	cmd := commands.BroadcastKeys{}
 	return cnn.Send(cmd)
 }
 
-func registerE2eeKeys(cnn *connection, user ephemeralUser) error {
+func registerE2eeKeys(cnn *cl.Connection, user cl.EphemeralUser) error {
 	cmd := commands.RegisterKeys{
-		User:         user.name,
-		IdKey:        [32]byte(user.keys.publicKey),
-		SignedKey:    [32]byte(user.keys.preKey.PublicKey().Bytes()),
-		Signature:    [64]byte(user.keys.signature),
-		EphemeralKey: [32]byte(user.keys.ek.PublicKey().Bytes()),
+		User:         user.Name,
+		IdKey:        [32]byte(user.Keys.PublicKey),
+		SignedKey:    [32]byte(user.Keys.PreKey.PublicKey().Bytes()),
+		Signature:    [64]byte(user.Keys.Signature),
+		EphemeralKey: [32]byte(user.Keys.Ek.PublicKey().Bytes()),
 	}
 	return cnn.Send(cmd)
 }

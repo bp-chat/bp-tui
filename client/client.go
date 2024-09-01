@@ -7,22 +7,29 @@ import (
 )
 
 type Client struct {
-	user ephemeralUser
-	conn *connection
+	user EphemeralUser
+	conn *Connection
 }
 
 const MaxNumberOfCommands int = 16
 
+func New(user EphemeralUser, conn *Connection) Client {
+	return Client{
+		user,
+		conn,
+	}
+}
+
 func (client *Client) SendMessage(msg string) error {
 	user := client.user
-	if user.isKeySet == false {
+	if user.IsKeySet == false {
 		return errors.New("Shared key not setted yeat")
 	}
 	msgBytes := []byte(msg)
 	if len(msgBytes) > commands.MessageSize {
 		return errors.New("The message is to large")
 	}
-	iv, encrypted, err := Encrypt(user.sharedKey[:], msgBytes)
+	iv, encrypted, err := Encrypt(user.SharedKey[:], msgBytes)
 	if err != nil {
 		return err
 	}
@@ -34,7 +41,7 @@ func (client *Client) SendMessage(msg string) error {
 	copy(msgBuffer, encrypted)
 	return client.conn.Send(
 		commands.Message{
-			Recipient:     user.name,
+			Recipient:     user.Name,
 			InitialVector: iv,
 			Len:           int32(mlen),
 			Message:       [commands.MessageSize]byte(msgBuffer),
@@ -44,11 +51,11 @@ func (client *Client) SendMessage(msg string) error {
 func (client *Client) RefreshKeys() error {
 	user := client.user
 	cmd := commands.RegisterKeys{
-		User:         user.name,
-		IdKey:        [32]byte(user.keys.publicKey),
-		SignedKey:    [32]byte(user.keys.preKey.PublicKey().Bytes()),
-		Signature:    [64]byte(user.keys.signature),
-		EphemeralKey: [32]byte(user.keys.ek.PublicKey().Bytes()),
+		User:         user.Name,
+		IdKey:        [32]byte(user.Keys.PublicKey),
+		SignedKey:    [32]byte(user.Keys.PreKey.PublicKey().Bytes()),
+		Signature:    [64]byte(user.Keys.Signature),
+		EphemeralKey: [32]byte(user.Keys.Ek.PublicKey().Bytes()),
 	}
 	return client.conn.Send(cmd)
 }
