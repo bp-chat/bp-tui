@@ -4,23 +4,15 @@ import (
 	"bufio"
 	"errors"
 	"fmt"
-	"log"
-	"os"
-
+	"github.com/bp-chat/bp-tui/client"
 	"github.com/bp-chat/bp-tui/commands"
 	"github.com/bp-chat/bp-tui/ui"
 	tea "github.com/charmbracelet/bubbletea"
+	"log"
+	"os"
 )
 
-type ephemeralUser struct {
-	name      commands.UserName
-	keys      KeySet
-	sharedKey [32]byte
-	isKeySet  bool
-}
-
 const Host string = "127.0.0.1:6680"
-const MaxNumberOfCommands int = 16
 
 func main() {
 	fmt.Printf("\n\nWho are you\n")
@@ -28,7 +20,7 @@ func main() {
 	name := []byte(getMessage(reader))
 	var username commands.UserName
 	copy(username[:], name[:])
-	eu := ephemeralUser{
+	eu := EphemeralUser{
 		name: username,
 		keys: CreateKeys(),
 	}
@@ -43,7 +35,7 @@ func main() {
 		eu,
 		conn,
 	}
-	// registerE2eeKeys(conn, eu)
+	registerE2eeKeys(conn, eu)
 	client.RefreshKeys()
 
 	p := tea.NewProgram(ui.New(func(nm string) error {

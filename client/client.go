@@ -1,4 +1,4 @@
-package main
+package client
 
 import (
 	"errors"
@@ -10,6 +10,8 @@ type Client struct {
 	user ephemeralUser
 	conn *connection
 }
+
+const MaxNumberOfCommands int = 16
 
 func (client *Client) SendMessage(msg string) error {
 	user := client.user
