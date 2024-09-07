@@ -1,46 +1,36 @@
 package main
 
 import (
-	"bufio"
 	"errors"
-	"fmt"
-	"log"
-	"os"
 
 	cl "github.com/bp-chat/bp-tui/client"
 	"github.com/bp-chat/bp-tui/commands"
 	"github.com/bp-chat/bp-tui/ui"
 	tea "github.com/charmbracelet/bubbletea"
+	"log"
 )
 
 const Host string = "127.0.0.1:6680"
 
 func main() {
-	fmt.Printf("\n\nWho are you\n")
-	reader := bufio.NewReader(os.Stdin)
-	name := []byte(getMessage(reader))
+
+	name := []byte("test user")
 	var username commands.UserName
 	copy(username[:], name[:])
 	eu := cl.EphemeralUser{
 		Name: username,
 		Keys: cl.CreateKeys(),
 	}
-	log.Printf("trying to connect to %s...\n", Host)
+	// log.Printf("trying to connect to %s...\n", Host)
 	conn, err := cl.Connect(Host)
 	if err != nil {
 		log.Fatalf("Could not connect to %s\n%s\n", Host, err)
 	}
 	defer conn.Close()
-	log.Printf("Connected to %s...\n", Host)
+	// log.Printf("Connected to %s...\n", Host)
 	client := cl.New(eu, conn)
-	registerE2eeKeys(conn, eu)
 	client.RefreshKeys()
-
-	p := tea.NewProgram(ui.New(func(nm string) error {
-		return send(conn, &eu, nm)
-	}, func() {
-		broadcastCommand(conn)
-	}))
+	p := tea.NewProgram(ui.New(client), tea.WithAltScreen())
 	go listen(conn, p, &eu)
 	if _, err := p.Run(); err != nil {
 		log.Fatal(err)
@@ -141,15 +131,4 @@ func registerE2eeKeys(cnn *cl.Connection, user cl.EphemeralUser) error {
 		EphemeralKey: [32]byte(user.Keys.Ek.PublicKey().Bytes()),
 	}
 	return cnn.Send(cmd)
-}
-
-func getMessage(reader *bufio.Reader) string {
-	input, isPrefix, err := reader.ReadLine()
-	if err != nil {
-		log.Fatalf("Could not parse input\n%s\n", err)
-	}
-	if isPrefix {
-		log.Fatalf("Use a smaller name my friend")
-	}
-	return string(input)
 }

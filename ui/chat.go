@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"strings"
 
+	cl "github.com/bp-chat/bp-tui/client"
 	"github.com/charmbracelet/bubbles/textarea"
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
@@ -14,14 +15,13 @@ import (
 )
 
 type Chat struct {
-	viewport     viewport.Model
-	messages     []string
-	textarea     textarea.Model
-	senderStyle  lipgloss.Style
-	receipStyle  lipgloss.Style
-	err          error
-	sendAction   func(string) error
-	broadcastCmd func()
+	viewport    viewport.Model
+	messages    []string
+	textarea    textarea.Model
+	senderStyle lipgloss.Style
+	receipStyle lipgloss.Style
+	err         error
+	client      cl.Client
 }
 
 type Message struct {
@@ -29,7 +29,7 @@ type Message struct {
 	Message string
 }
 
-func New(send func(string) error, broadcastCommand func()) Chat {
+func NewChat(bpClient cl.Client) Chat {
 	ta := textarea.New()
 	ta.Placeholder = "Send a message..."
 	ta.Focus()
@@ -51,14 +51,13 @@ Type a message and press Enter to send.`)
 	ta.KeyMap.InsertNewline.SetEnabled(false)
 
 	return Chat{
-		textarea:     ta,
-		messages:     []string{},
-		viewport:     vp,
-		senderStyle:  lipgloss.NewStyle().Foreground(lipgloss.Color("5")),
-		receipStyle:  lipgloss.NewStyle().Foreground(lipgloss.Color("4")),
-		err:          nil,
-		sendAction:   send,
-		broadcastCmd: broadcastCommand,
+		textarea:    ta,
+		messages:    []string{},
+		viewport:    vp,
+		senderStyle: lipgloss.NewStyle().Foreground(lipgloss.Color("5")),
+		receipStyle: lipgloss.NewStyle().Foreground(lipgloss.Color("4")),
+		client:      bpClient,
+		err:         nil,
 	}
 }
 
@@ -82,13 +81,13 @@ func (m Chat) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			fmt.Println(m.textarea.Value())
 			return m, tea.Quit
 		case tea.KeyCtrlW:
-			m.broadcastCmd()
+			m.client.BroadcastKeys()
 			break
 		case tea.KeyEnter:
 			textMsg := m.textarea.Value()
 			m.messages = append(m.messages, m.senderStyle.Render("You: ")+textMsg)
 			m.viewport.SetContent(strings.Join(m.messages, "\n"))
-			m.err = m.sendAction(textMsg)
+			m.err = m.client.SendMessage(textMsg)
 			m.textarea.Reset()
 			m.viewport.GotoBottom()
 		}
@@ -111,6 +110,7 @@ func (m Chat) View() string {
 	s = fmt.Sprintf(
 		"\n\n%v\n\n%s\n\n%s\n\n",
 		m.err,
+		// lipgloss.JoinHorizontal(lipgloss.Top, m.viewport.View(),  m.viewport.View()),
 		m.viewport.View(),
 		m.textarea.View(),
 	)
