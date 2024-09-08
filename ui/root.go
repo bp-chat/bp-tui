@@ -14,16 +14,25 @@ const (
 )
 
 type Model struct {
-	client bp.Client
-	chat   Chat
+	users       userList
+	client      bp.Client
+	chat        Chat
+	activeModel tea.Model
 }
 
 type tickMsg time.Time
 
-func New(client bp.Client) Model {
+func New(config bp.Config, client bp.Client) Model {
+	u := []user{
+		{name: "user 1"},
+		{name: "user 2"},
+		{name: "user 3"},
+	}
 	return Model{
-		client: client,
-		chat:   NewChat(client),
+		client:      client,
+		chat:        NewChat(client),
+		users:       newUserList(client, u),
+		activeModel: newGreeter(),
 	}
 }
 
@@ -41,9 +50,9 @@ func (m Model) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 
 		return m, nil
 	}
-	return m.chat.Update(message)
+	return m.activeModel.Update(message)
 }
 
 func (m Model) View() string {
-	return m.chat.View()
+	return m.activeModel.View()
 }

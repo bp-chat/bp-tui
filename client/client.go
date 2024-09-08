@@ -6,6 +6,10 @@ import (
 	"github.com/bp-chat/bp-tui/commands"
 )
 
+type Config struct {
+	Host string
+}
+
 type Client struct {
 	user EphemeralUser
 	conn *Connection

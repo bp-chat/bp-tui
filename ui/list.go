@@ -15,22 +15,28 @@ type userList struct {
 var docStyle = lipgloss.NewStyle().Margin(1, 2)
 
 type user struct {
-	name string
+	name    string
+	canChat bool
 }
 
-func (i user) Title() string       { return i.name }
-func (i user) Description() string { return "" }
+func (i user) Title() string { return i.name }
+func (i user) Description() string {
+	if i.canChat {
+		return "unlocked"
+	}
+	return "locked"
+}
 func (i user) FilterValue() string { return i.name }
 
 func mapUsers(users []user) []list.Item {
-	result := make([]list.Item, len(users))
+	result := make([]list.Item, 0)
 	for _, u := range users {
 		result = append(result, u)
 	}
 	return result
 }
 
-func newList(client bp.Client, users []user) userList {
+func newUserList(client bp.Client, users []user) userList {
 	return userList{
 		client: client,
 		list:   list.New(mapUsers(users), list.NewDefaultDelegate(), 0, 0),
@@ -39,6 +45,10 @@ func newList(client bp.Client, users []user) userList {
 
 func (m userList) Init() tea.Cmd {
 	return nil
+}
+
+func (m userList) addUser(user user) {
+	m.list.InsertItem(len(m.list.Items()), user)
 }
 
 func (m userList) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -58,5 +68,6 @@ func (m userList) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m userList) View() string {
+	//TODO add help
 	return docStyle.Render(m.list.View())
 }
