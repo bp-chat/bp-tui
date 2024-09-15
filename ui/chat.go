@@ -21,7 +21,7 @@ type Chat struct {
 	senderStyle lipgloss.Style
 	receipStyle lipgloss.Style
 	err         error
-	client      cl.Client
+	client      *cl.Client
 }
 
 type Message struct {
@@ -29,7 +29,7 @@ type Message struct {
 	Message string
 }
 
-func NewChat(bpClient cl.Client) Chat {
+func NewChat(bpClient *cl.Client) Chat {
 	ta := textarea.New()
 	ta.Placeholder = "Send a message..."
 	ta.Focus()

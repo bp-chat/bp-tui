@@ -17,22 +17,8 @@ func main() {
 	config := cl.Config{
 		Host: host,
 	}
-	name := []byte("test user")
-	var username commands.UserName
-	copy(username[:], name[:])
-	eu := cl.EphemeralUser{
-		Name: username,
-		Keys: cl.CreateKeys(),
-	}
-	conn, err := cl.Connect(host)
-	if err != nil {
-		log.Fatalf("Could not connect to %s\n%s\n", host, err)
-	}
-	defer conn.Close()
-	client := cl.New(eu, conn)
-	client.RefreshKeys()
-	p := tea.NewProgram(ui.New(config, client), tea.WithAltScreen())
-	go listen(conn, p, &eu)
+	p := tea.NewProgram(ui.New(config), tea.WithAltScreen())
+	// go listen(conn, p, &eu)
 	if _, err := p.Run(); err != nil {
 		log.Fatal(err)
 	}

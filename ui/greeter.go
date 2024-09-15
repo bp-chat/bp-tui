@@ -3,16 +3,19 @@ package ui
 import (
 	"fmt"
 
+	"github.com/bp-chat/bp-tui/client"
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 )
 
 type greeter struct {
+	config    client.Config
 	textInput textinput.Model
 	err       error
+	info      string
 }
 
-func newGreeter() greeter {
+func newGreeter(config client.Config) greeter {
 	ti := textinput.New()
 	ti.Placeholder = "Heisenberg"
 	ti.Focus()
@@ -20,8 +23,10 @@ func newGreeter() greeter {
 	ti.Width = 20
 
 	return greeter{
+		config:    config,
 		textInput: ti,
 		err:       nil,
+		info:      "",
 	}
 }
 
@@ -33,10 +38,18 @@ func (m greeter) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
 
 	switch msg := msg.(type) {
+	case connectionFailedMsg:
+		m.textInput.Reset()
+		m.info = "could not connect to the server"
+		m.err = msg.err
+		return m, nil
 	case tea.KeyMsg:
 		switch msg.Type {
-		case tea.KeyEnter, tea.KeyCtrlC, tea.KeyEsc:
+		case tea.KeyCtrlC, tea.KeyEsc:
 			return m, tea.Quit
+		case tea.KeyEnter:
+			m.info = "connecting..."
+			return m, connect(m.config, m.textInput.Value())
 		}
 	}
 
@@ -46,8 +59,9 @@ func (m greeter) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 func (m greeter) View() string {
 	return fmt.Sprintf(
-		"What’s your name?\n\n%s\n\n%s",
+		"What’s your name?\n\n%s\n\n%s\n\n%s",
 		m.textInput.View(),
 		"(esc to quit)",
+		m.info,
 	) + "\n"
 }

@@ -8,7 +8,7 @@ import (
 )
 
 type userList struct {
-	client bp.Client
+	client *bp.Client
 	list   list.Model
 }
 
@@ -36,7 +36,7 @@ func mapUsers(users []user) []list.Item {
 	return result
 }
 
-func newUserList(client bp.Client, users []user) userList {
+func newUserList(client *bp.Client, users []user) userList {
 	return userList{
 		client: client,
 		list:   list.New(mapUsers(users), list.NewDefaultDelegate(), 0, 0),
