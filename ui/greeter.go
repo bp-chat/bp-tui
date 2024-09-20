@@ -3,19 +3,20 @@ package ui
 import (
 	"fmt"
 
-	"github.com/bp-chat/bp-tui/client"
+	bp "github.com/bp-chat/bp-tui/client"
+	"github.com/bp-chat/bp-tui/commands"
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 )
 
 type greeter struct {
-	config    client.Config
+	config    bp.Config
 	textInput textinput.Model
 	err       error
 	info      string
 }
 
-func newGreeter(config client.Config) greeter {
+func newGreeter(config bp.Config) greeter {
 	ti := textinput.New()
 	ti.Placeholder = "Heisenberg"
 	ti.Focus()
@@ -27,6 +28,30 @@ func newGreeter(config client.Config) greeter {
 		textInput: ti,
 		err:       nil,
 		info:      "",
+	}
+}
+
+func connect(config bp.Config, name string) tea.Cmd {
+	return func() tea.Msg {
+
+		var username commands.UserName
+		copy(username[:], name[:])
+		eu := bp.EphemeralUser{
+			Name: username,
+			Keys: bp.CreateKeys(),
+		}
+		conn, err := bp.Connect(config.Host)
+		if err != nil {
+			return connectionFailedMsg{err}
+		}
+		client := bp.New(eu, conn)
+		err = client.RefreshKeys()
+		if err != nil {
+			return connectionFailedMsg{err: nil}
+		}
+		return userConnectedMsg{
+			connectedClient: client,
+		}
 	}
 }
 
