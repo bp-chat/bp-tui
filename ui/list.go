@@ -4,15 +4,12 @@ import (
 	bp "github.com/bp-chat/bp-tui/client"
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
 )
 
 type userList struct {
 	client *bp.Client
 	list   list.Model
 }
-
-var docStyle = lipgloss.NewStyle().Margin(1, 2)
 
 type user struct {
 	name    string
@@ -36,10 +33,10 @@ func mapUsers(users []user) []list.Item {
 	return result
 }
 
-func newUserList(client *bp.Client, users []user) userList {
+func newUserList(client *bp.Client, users *[]user, size vec2) userList {
 	return userList{
 		client: client,
-		list:   list.New(mapUsers(users), list.NewDefaultDelegate(), 0, 0),
+		list:   list.New(mapUsers(*users), list.NewDefaultDelegate(), size.x, size.y),
 	}
 }
 
@@ -68,6 +65,5 @@ func (m userList) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m userList) View() string {
-	//TODO add help
 	return docStyle.Render(m.list.View())
 }

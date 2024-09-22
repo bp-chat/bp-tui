@@ -13,10 +13,15 @@ const (
 	foregroundAccentColor lipgloss.Color = lipgloss.Color("#ff0000")
 )
 
+type vec2 struct {
+	x int
+	y int
+}
+
 type Model struct {
+	users       []user
 	client      *bp.Client
 	activeModel tea.Model
-	users       []user
 }
 
 type tickMsg time.Time
@@ -26,18 +31,21 @@ type userConnectedMsg struct {
 	connectedClient bp.Client
 }
 
+var docStyle = lipgloss.NewStyle().Margin(1, 2)
+var windowSize vec2
+
 func New(config bp.Config) Model {
-	u := []user{
-		{name: "user 1"},
-		{name: "user 2"},
-		{name: "user 3"},
-	}
 	var client *bp.Client
+	u := []user{
+		{name: "user 1", canChat: false},
+		{name: "user 2", canChat: false},
+		{name: "user 3", canChat: false},
+	}
 	greeter := newGreeter(config)
 	return Model{
+		users:       u,
 		client:      client,
 		activeModel: greeter,
-		users:       u,
 	}
 }
 
@@ -54,10 +62,14 @@ func (m Model) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 		case "q", "esc", "ctrl+c":
 			return m, tea.Quit
 		}
+	case tea.WindowSizeMsg:
+		h, v := docStyle.GetFrameSize()
+		windowSize.x = msg.Width - h
+		windowSize.y = msg.Height - v
 	case userConnectedMsg:
 		m.client = &msg.connectedClient
-		m.activeModel = newUserList(m.client, m.users)
-		return m, nil
+		m.activeModel = newUserList(m.client, &m.users, windowSize)
+		return m, cmd
 	}
 	m.activeModel, cmd = m.activeModel.Update(message)
 	return m, cmd
